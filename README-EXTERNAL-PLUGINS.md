@@ -2,9 +2,32 @@
 
 This document explains how to use external plugin mounting to update plugins and configuration without rebuilding the Docker image.
 
-## Quick Start
+## Recommended: Hybrid Approach
 
-Run the setup script to configure external plugin mounting:
+The **hybrid approach** combines the best of both worlds:
+- **ConfigMap** for `plugins/config.yaml` (easy CLI updates)
+- **Persistent Volume** for plugin code (no size limits)
+
+### Quick Start
+
+Run the hybrid setup script:
+
+```bash
+./scripts/setup-hybrid-plugins.sh
+```
+
+This will:
+1. Create ConfigMap for `plugins/config.yaml`
+2. Create Persistent Volume Claim (1GB)
+3. Mount both to the application
+4. Upload plugins to the PVC
+5. Restart the application
+
+**See [Hybrid Plugin Mounting Guide](docs/deployment/hybrid-plugin-mounting.md) for full documentation.**
+
+## Alternative: ConfigMap-Only Approach
+
+For smaller plugins (under 1MB), you can use ConfigMaps only:
 
 ```bash
 ./scripts/setup-external-plugins.sh
