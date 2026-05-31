@@ -15,6 +15,7 @@ plugin_settings:
   plugin_health_check_interval: 120
   include_user_info: false
 
+plugins:
   # Token Cost Calculator - Display token costs in agent chat
   - name: "TokenCostCalculatorPlugin"
     kind: "plugins.token_cost_calculator.token_cost_calculator.TokenCostCalculatorPlugin"
@@ -33,7 +34,6 @@ plugin_settings:
       cost_per_token: 0.000001
       display_in_metadata: true
 
-plugins:
   # Argument Normalizer - stabilize inputs before anything else
   - name: "ArgumentNormalizer"
     kind: "plugins.argument_normalizer.argument_normalizer.ArgumentNormalizerPlugin"
