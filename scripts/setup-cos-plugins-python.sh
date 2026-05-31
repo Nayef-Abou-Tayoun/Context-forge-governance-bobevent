@@ -69,8 +69,9 @@ ibmcloud ce app update --name "$APP_NAME" \
     --env PLUGINS_ENABLED=true \
     --env PLUGINS_CONFIG_FILE=/tmp/config/config.yaml \
     --mount-configmap /tmp/config="$CONFIGMAP_NAME" \
-    --cmd "python3" \
-    --args "/app/scripts/sync-plugins-from-cos-python.py && exec ./docker-entrypoint.sh"
+    --cmd "/bin/sh" \
+    --argument "-c" \
+    --argument "python3 /app/scripts/sync-plugins-from-cos-python.py && exec ./docker-entrypoint.sh"
 
 echo "✓ Application updated"
 

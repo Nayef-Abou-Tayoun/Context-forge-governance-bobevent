@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 """
 IBM Cloud Object Storage Plugin Sync Script (Python)
-Uses boto3 with IBM Cloud COS credentials
+Uses ibm-cos-sdk with IBM Cloud COS API key
 Downloads plugins to /tmp which is writable in Code Engine
 """
 
 import os
 import sys
-import json
 from pathlib import Path
-import boto3
-from botocore.client import Config
+import ibm_boto3
+from ibm_botocore.client import Config
 
 def main():
     print("=== IBM Cloud Object Storage Plugin Sync (Python) ===")
@@ -37,14 +36,14 @@ def main():
     print(f"  COS Prefix: {cos_prefix}")
     print(f"  Plugin Directory: {plugin_dir}")
     
-    # Create boto3 client for IBM Cloud COS
+    # Create ibm_boto3 client for IBM Cloud COS
     print("Connecting to IBM Cloud COS...")
-    cos_client = boto3.client(
+    cos_client = ibm_boto3.client(
         's3',
-        aws_access_key_id=cos_api_key,
-        aws_secret_access_key=cos_instance_id,
+        ibm_api_key_id=cos_api_key,
+        ibm_service_instance_id=cos_instance_id,
         endpoint_url=f'https://{cos_endpoint}',
-        config=Config(signature_version='s3v4')
+        config=Config(signature_version='oauth')
     )
     
     # Test connection
