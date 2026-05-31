@@ -203,38 +203,38 @@ class PIIDetectorNA:
         # IMEI is a 15-digit number (14 digits + 1 check digit) or 17 digits with software version
         if self.config.detect_imei:
             patterns.extend([
-                # IMEI value following IMEI label (flexible spacing)
+                # IMEI value following IMEI label - match with single space
                 PIIPattern(
                     type=PIIType.IMEI,
-                    pattern=r'(?<=\bIMEI[:\s#]\s*)\d{15}(?:\d{2})?\b',
+                    pattern=r'\bIMEI:\s*(\d{15}(?:\d{2})?)\b',
                     description="IMEI value",
                     mask_strategy=MaskingStrategy.PARTIAL,
                 ),
-                # Device IMEI value (flexible spacing)
+                # Device IMEI value
                 PIIPattern(
                     type=PIIType.IMEI,
-                    pattern=r'(?<=\bDevice\s+IMEI[:\s#]\s*)\d{15}(?:\d{2})?\b',
+                    pattern=r'\bDevice\s+IMEI:\s*(\d{15}(?:\d{2})?)\b',
                     description="Device IMEI value",
                     mask_strategy=MaskingStrategy.PARTIAL,
                 ),
-                # Device ID value (flexible spacing)
+                # Device ID value
                 PIIPattern(
                     type=PIIType.IMEI,
-                    pattern=r'(?<=\bDevice\s+ID[:\s#]\s*)\d{15}(?:\d{2})?\b',
+                    pattern=r'\bDevice\s+ID:\s*(\d{15}(?:\d{2})?)\b',
                     description="Device ID value",
                     mask_strategy=MaskingStrategy.PARTIAL,
                 ),
-                # Equipment ID value (flexible spacing)
+                # Equipment ID value
                 PIIPattern(
                     type=PIIType.IMEI,
-                    pattern=r'(?<=\bEquipment\s+ID[:\s#]\s*)\d{15}(?:\d{2})?\b',
+                    pattern=r'\bEquipment\s+ID:\s*(\d{15}(?:\d{2})?)\b',
                     description="Equipment ID value",
                     mask_strategy=MaskingStrategy.PARTIAL,
                 ),
                 # Dashed IMEI format: XXXXXX-XX-XXXXXX-X
                 PIIPattern(
                     type=PIIType.IMEI,
-                    pattern=r'\b\d{6}-\d{2}-\d{6}-\d{1,3}\b',
+                    pattern=r'\b(\d{6}-\d{2}-\d{6}-\d{1,3})\b',
                     description="IMEI with dashes",
                     mask_strategy=MaskingStrategy.PARTIAL,
                 ),
@@ -298,8 +298,19 @@ class PIIDetectorNA:
                                 break
 
                         if not overlaps:
-                            type_detections.append({"value": match.group(), "start": match.start(), "end": match.end(), "mask_strategy": mask_strategy})
-                            seen_ranges.append((match.start(), match.end()))
+                            # For IMEI patterns with capturing groups, use group(1) if available
+                            if pii_type == PIIType.IMEI and match.lastindex and match.lastindex >= 1:
+                                value = match.group(1)
+                                # Find the actual position of the captured group
+                                start_pos = match.start(1)
+                                end_pos = match.end(1)
+                            else:
+                                value = match.group()
+                                start_pos = match.start()
+                                end_pos = match.end()
+                            
+                            type_detections.append({"value": value, "start": start_pos, "end": end_pos, "mask_strategy": mask_strategy})
+                            seen_ranges.append((start_pos, end_pos))
 
             if type_detections:
                 detections[pii_type] = type_detections
