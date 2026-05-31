@@ -36,19 +36,21 @@ def main():
     print(f"  COS Prefix: {cos_prefix}")
     print(f"  Plugin Directory: {plugin_dir}")
     
-    # Create ibm_boto3 client for IBM Cloud COS
+    # Create ibm_boto3 resource for IBM Cloud COS
     print("Connecting to IBM Cloud COS...")
-    cos_client = ibm_boto3.client(
+    cos = ibm_boto3.resource(
         's3',
         ibm_api_key_id=cos_api_key,
         ibm_service_instance_id=cos_instance_id,
-        endpoint_url=f'https://{cos_endpoint}',
-        config=Config(signature_version='oauth')
+        endpoint_url=f'https://{cos_endpoint}'
     )
+    
+    # Get bucket object
+    bucket = cos.Bucket(cos_bucket)
     
     # Test connection
     try:
-        cos_client.list_objects_v2(Bucket=cos_bucket, Prefix=cos_prefix, MaxKeys=1)
+        list(bucket.objects.filter(Prefix=cos_prefix, MaxKeys=1))
         print("✓ COS connection successful")
     except Exception as e:
         print(f"ERROR: Failed to connect to COS: {e}")
@@ -61,35 +63,28 @@ def main():
     # List and download plugins
     print("Listing plugins in COS...")
     try:
-        paginator = cos_client.get_paginator('list_objects_v2')
-        pages = paginator.paginate(Bucket=cos_bucket, Prefix=cos_prefix)
-        
         file_count = 0
-        for page in pages:
-            if 'Contents' not in page:
+        for obj in bucket.objects.filter(Prefix=cos_prefix):
+            key = obj.key
+            
+            # Skip directory markers
+            if key.endswith('/'):
                 continue
-                
-            for obj in page['Contents']:
-                key = obj['Key']
-                
-                # Skip directory markers
-                if key.endswith('/'):
-                    continue
-                
-                # Remove prefix to get relative path
-                relative_path = key[len(cos_prefix):]
-                if not relative_path:
-                    continue
-                
-                local_path = Path(plugin_dir) / relative_path
-                
-                # Create directory if needed
-                local_path.parent.mkdir(parents=True, exist_ok=True)
-                
-                # Download file
-                print(f"  Downloading: {key} -> {local_path}")
-                cos_client.download_file(cos_bucket, key, str(local_path))
-                file_count += 1
+            
+            # Remove prefix to get relative path
+            relative_path = key[len(cos_prefix):]
+            if not relative_path:
+                continue
+            
+            local_path = Path(plugin_dir) / relative_path
+            
+            # Create directory if needed
+            local_path.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Download file
+            print(f"  Downloading: {key} -> {local_path}")
+            bucket.download_file(key, str(local_path))
+            file_count += 1
         
         print(f"✓ Downloaded {file_count} file(s) from COS")
         
