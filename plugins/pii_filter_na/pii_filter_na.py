@@ -172,38 +172,8 @@ class PIIDetectorNA:
         if self.config.detect_ssn:
             patterns.append(PIIPattern(type=PIIType.SSN, pattern=r"\b\d{3}-\d{2}-\d{4}\b", description="US Social Security Number", mask_strategy=MaskingStrategy.PARTIAL))
 
-        # Dutch BSN (Burgerservicenummer) patterns - 9-digit Dutch citizen service number
-        if self.config.detect_bsn:
-            # Match 9-digit numbers with BSN context keywords to avoid false positives
-            # Positive context: BSN, Citizen ID, Burgerservicenummer, ID, Order, Invoice, Tracking, Numbers, etc.
-            # This pattern requires context words before the 9-digit number
-            patterns.extend(
-                [
-                    # Explicit BSN context
-                    PIIPattern(
-                        type=PIIType.BSN,
-                        pattern=r"\b(?:BSN|Citizen\s+ID|Burgerservicenummer)[:\s#]*\d{9}\b",
-                        description="Dutch BSN with explicit context",
-                        mask_strategy=MaskingStrategy.PARTIAL,
-                    ),
-                    # Generic ID context
-                    # Note: Phone numbers are filtered by phone detector which runs first
-                    PIIPattern(
-                        type=PIIType.BSN,
-                        pattern=r"\b(?:ID|Order|Invoice|Tracking|Numbers?)[:\s#]*\d{9}\b",
-                        description="9-digit ID with generic context",
-                        mask_strategy=MaskingStrategy.PARTIAL,
-                    ),
-                    # "My BSN is" pattern
-                    PIIPattern(
-                        type=PIIType.BSN,
-                        pattern=r"\b(?:My\s+)?BSN\s+(?:is\s+)?\d{9}\b",
-                        description="BSN with 'is' context",
-                        mask_strategy=MaskingStrategy.PARTIAL,
-                    ),
-                ]
-            )
-
+        # Note: BSN (Dutch) patterns removed - not applicable to North America
+        
         # Credit Card patterns (basic validation for common formats)
         if self.config.detect_credit_card:
             patterns.append(PIIPattern(type=PIIType.CREDIT_CARD, pattern=r"\b(?:\d{4}[-\s]?){3}\d{4}\b", description="Credit card number", mask_strategy=MaskingStrategy.PARTIAL))
