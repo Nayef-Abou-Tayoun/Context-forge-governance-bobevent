@@ -203,24 +203,31 @@ class PIIDetectorNA:
         # IMEI is a 15-digit number (14 digits + 1 check digit) or 17 digits with software version
         if self.config.detect_imei:
             patterns.extend([
-                # IMEI value following IMEI label
+                # IMEI value following IMEI label (flexible spacing)
                 PIIPattern(
                     type=PIIType.IMEI,
-                    pattern=r'(?<=\bIMEI[:\s#])\d{15}(?:\d{2})?\b',
+                    pattern=r'(?<=\bIMEI[:\s#]\s*)\d{15}(?:\d{2})?\b',
                     description="IMEI value",
                     mask_strategy=MaskingStrategy.PARTIAL,
                 ),
-                # Device ID value
+                # Device IMEI value (flexible spacing)
                 PIIPattern(
                     type=PIIType.IMEI,
-                    pattern=r'(?<=\bDevice ID[:\s#])\d{15}(?:\d{2})?\b',
+                    pattern=r'(?<=\bDevice\s+IMEI[:\s#]\s*)\d{15}(?:\d{2})?\b',
+                    description="Device IMEI value",
+                    mask_strategy=MaskingStrategy.PARTIAL,
+                ),
+                # Device ID value (flexible spacing)
+                PIIPattern(
+                    type=PIIType.IMEI,
+                    pattern=r'(?<=\bDevice\s+ID[:\s#]\s*)\d{15}(?:\d{2})?\b',
                     description="Device ID value",
                     mask_strategy=MaskingStrategy.PARTIAL,
                 ),
-                # Equipment ID value
+                # Equipment ID value (flexible spacing)
                 PIIPattern(
                     type=PIIType.IMEI,
-                    pattern=r'(?<=\bEquipment ID[:\s#])\d{15}(?:\d{2})?\b',
+                    pattern=r'(?<=\bEquipment\s+ID[:\s#]\s*)\d{15}(?:\d{2})?\b',
                     description="Equipment ID value",
                     mask_strategy=MaskingStrategy.PARTIAL,
                 ),
