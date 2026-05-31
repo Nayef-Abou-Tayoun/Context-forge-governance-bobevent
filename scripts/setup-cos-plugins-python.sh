@@ -8,9 +8,9 @@ set -e
 echo "=== IBM Cloud Object Storage Plugin Setup (Python) ==="
 echo "This script will configure your Code Engine application to sync plugins from COS"
 
-# Embedded COS credentials
-COS_API_KEY="wlm0CZNVSCYcHfWrNTOV3RTPDClLoZNJhCyFLHO7hYFj"
-COS_INSTANCE_ID="crn:v1:bluemix:public:cloud-object-storage:global:a/a11ac9a4e11b4f2ea5316197cbef1878:dcd0fbf6-d48d-4217-b3f3-58e34695220f::"
+# Embedded COS credentials (HMAC)
+COS_ACCESS_KEY_ID="c08ee00ae8664a27b59fe15d3061e066"
+COS_SECRET_ACCESS_KEY="31a01637461b1571f610b21041cdaa7131b1943da82328d1"
 COS_BUCKET="contextforge-plugins"
 COS_ENDPOINT="s3.us-south.cloud-object-storage.appdomain.cloud"
 COS_PREFIX="plugins/"
@@ -30,16 +30,16 @@ echo "Step 1: Creating/updating COS credentials secret..."
 if ibmcloud ce secret get --name "$SECRET_NAME" &>/dev/null; then
     echo "  Secret exists, updating..."
     ibmcloud ce secret update --name "$SECRET_NAME" \
-        --from-literal COS_API_KEY="$COS_API_KEY" \
-        --from-literal COS_INSTANCE_ID="$COS_INSTANCE_ID" \
+        --from-literal COS_ACCESS_KEY_ID="$COS_ACCESS_KEY_ID" \
+        --from-literal COS_SECRET_ACCESS_KEY="$COS_SECRET_ACCESS_KEY" \
         --from-literal COS_BUCKET="$COS_BUCKET" \
         --from-literal COS_ENDPOINT="$COS_ENDPOINT" \
         --from-literal COS_PREFIX="$COS_PREFIX"
 else
     echo "  Creating new secret..."
     ibmcloud ce secret create --name "$SECRET_NAME" \
-        --from-literal COS_API_KEY="$COS_API_KEY" \
-        --from-literal COS_INSTANCE_ID="$COS_INSTANCE_ID" \
+        --from-literal COS_ACCESS_KEY_ID="$COS_ACCESS_KEY_ID" \
+        --from-literal COS_SECRET_ACCESS_KEY="$COS_SECRET_ACCESS_KEY" \
         --from-literal COS_BUCKET="$COS_BUCKET" \
         --from-literal COS_ENDPOINT="$COS_ENDPOINT" \
         --from-literal COS_PREFIX="$COS_PREFIX"
