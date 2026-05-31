@@ -1,27 +1,28 @@
 # PII Filter NA Plugin for ContextForge
 
 > Author: Based on original by Mihai Criveti
-> Version: 1.0.0
+> Version: 2.0.0
 
-A plugin for detecting and masking Personally Identifiable Information (PII) specific to North America in ContextForge prompts and responses.
+A plugin for detecting and masking Canadian Personally Identifiable Information (PII) in ContextForge prompts and responses.
 
-## North America-Specific PII Types
+## Canadian PII Types Supported
 
-### United States
-- **SSN** - Social Security Numbers: `123-45-6789`
-- **EIN** - Employer Identification Numbers: `12-3456789`
-- **ITIN** - Individual Taxpayer Identification Numbers: `9XX-XX-XXXX`
+### Social Insurance Number (SIN)
+- **Format**: `XXX-XXX-XXX` (9 digits with dashes)
+- **Example**: `123-456-789`
+- **Masking**: Shows last 3 digits (`***-***-789`)
 
-### Canada
-- **SIN** - Social Insurance Numbers: `123-456-789`
-- **Canadian Postal Codes**: `A1A 1A1`
-- **Canadian Health Card Numbers**: Province-specific formats
+### Postal Code
+- **Format**: `A1A 1A1` (letter-digit-letter space digit-letter-digit)
+- **Example**: `K1A 0B1`, `M5W 1E6`
+- **Masking**: Shows first 3 characters (`K1A ***`)
 
-### Common North America
-- Credit Cards, Emails, Phone Numbers, IP Addresses
-- Dates of Birth, Passports, Driver's Licenses
-- Bank Accounts, Medical Records
-- AWS Keys, API Keys, IMEI numbers
+### Health Card Numbers
+Provincial formats supported:
+- **Ontario**: `1234-567-890` (10 digits with dashes)
+- **Quebec**: `ABCD 1234 5678` (4 letters + 8 digits)
+- **BC**: `9123456789` (10 digits starting with 9)
+- **Masking**: Shows last 3 digits (`****-***-890`)
 
 ## Configuration Example
 
@@ -29,33 +30,38 @@ A plugin for detecting and masking Personally Identifiable Information (PII) spe
 plugins:
   - name: "PIIFilterNAPlugin"
     kind: "plugins.pii_filter_na.pii_filter_na.PIIFilterNAPlugin"
-    description: "North America-specific PII detection and masking"
-    version: "1.0"
+    description: "Canadian PII detection and masking"
+    version: "2.0"
     hooks: ["prompt_pre_fetch", "prompt_post_fetch", "tool_pre_invoke", "tool_post_invoke"]
-    tags: ["security", "pii", "compliance", "north-america", "gdpr", "hipaa"]
+    tags: ["security", "pii", "compliance", "canada", "privacy"]
     mode: "enforce"
-    priority: 10
+    priority: 51
     config:
-      # US-specific
-      detect_ssn: true
-      detect_ein: true
-      detect_itin: true
-      
-      # Canada-specific
+      # Canadian PII detection
       detect_sin: true
       detect_canadian_postal_code: true
       detect_canadian_health_card: true
       
-      # Common
-      detect_credit_card: true
-      detect_email: true
-      detect_phone: true
+      # Masking strategy
+      default_mask_strategy: "partial"  # Shows partial info
+      redaction_text: "[REDACTED]"
       
-      # Masking
-      default_mask_strategy: "partial"
-      block_on_detection: false
+      # Behavior
+      block_on_detection: false  # Set true to block requests with PII
       log_detections: true
+      include_detection_details: true
 ```
+
+## Masking Strategies
+
+- **PARTIAL** (default): Shows partial information for identification
+  - SIN: `***-***-789`
+  - Postal Code: `K1A ***`
+  - Health Card: `****-***-890`
+- **REDACT**: Replaces with `[REDACTED]`
+- **HASH**: Replaces with hash value
+- **TOKENIZE**: Replaces with token
+- **REMOVE**: Removes entirely
 
 ## Testing
 

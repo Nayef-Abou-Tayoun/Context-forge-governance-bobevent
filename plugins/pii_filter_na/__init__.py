@@ -5,8 +5,8 @@ Location: ./plugins/pii_filter_na/__init__.py
 Copyright 2025
 SPDX-License-Identifier: Apache-2.0
 
-This package provides PII detection and masking specifically for North American
-data formats including Canadian SIN, US EIN, Canadian postal codes, and more.
+This package provides PII detection and masking specifically for Canadian
+data formats including SIN, postal codes, and health card numbers.
 """
 
 from .pii_filter_na import PIIFilterNAPlugin, PIIFilterNAConfig

@@ -4,9 +4,9 @@ Copyright 2025
 SPDX-License-Identifier: Apache-2.0
 Authors: Mihai Criveti
 
-North America PII Filter Plugin for ContextForge.
+Canadian PII Filter Plugin for ContextForge.
 This plugin detects and masks Personally Identifiable Information (PII) specific to
-North America, including Canadian SIN, US EIN, Canadian postal codes, and more.
+Canada, including SIN, postal codes, and health card numbers.
 """
 
 # Standard
@@ -59,31 +59,12 @@ except Exception as e:
 
 
 class PIIType(str, Enum):
-    """Types of PII that can be detected - North America specific."""
+    """Types of PII that can be detected - Canadian specific."""
 
-    # US-specific
-    SSN = "ssn"
-    EIN = "ein"  # US Employer Identification Number
-    ITIN = "itin"  # US Individual Taxpayer Identification Number
-    
     # Canada-specific
     SIN = "sin"  # Canadian Social Insurance Number
     CANADIAN_POSTAL_CODE = "canadian_postal_code"
     CANADIAN_HEALTH_CARD = "canadian_health_card"
-    
-    # Common North America
-    CREDIT_CARD = "credit_card"
-    EMAIL = "email"
-    PHONE = "phone"
-    IP_ADDRESS = "ip_address"
-    DATE_OF_BIRTH = "date_of_birth"
-    PASSPORT = "passport"
-    DRIVER_LICENSE = "driver_license"
-    BANK_ACCOUNT = "bank_account"
-    MEDICAL_RECORD = "medical_record"
-    AWS_KEY = "aws_key"
-    API_KEY = "api_key"
-    IMEI = "imei"
     CUSTOM = "custom"
 
 
@@ -108,34 +89,15 @@ class PIIPattern(BaseModel):
 
 
 class PIIFilterNAConfig(BaseModel):
-    """Configuration for the North America PII Filter plugin."""
+    """Configuration for the Canadian PII Filter plugin."""
 
-    # US-specific PII types
-    detect_ssn: bool = Field(default=True, description="Detect US Social Security Numbers")
-    detect_ein: bool = Field(default=True, description="Detect US Employer Identification Numbers")
-    detect_itin: bool = Field(default=True, description="Detect US Individual Taxpayer Identification Numbers")
-    
     # Canada-specific PII types
     detect_sin: bool = Field(default=True, description="Detect Canadian Social Insurance Numbers")
     detect_canadian_postal_code: bool = Field(default=True, description="Detect Canadian postal codes")
     detect_canadian_health_card: bool = Field(default=True, description="Detect Canadian health card numbers")
-    
-    # Common North America PII types
-    detect_credit_card: bool = Field(default=True, description="Detect credit card numbers")
-    detect_email: bool = Field(default=True, description="Detect email addresses")
-    detect_phone: bool = Field(default=True, description="Detect phone numbers")
-    detect_ip_address: bool = Field(default=True, description="Detect IP addresses")
-    detect_date_of_birth: bool = Field(default=True, description="Detect dates of birth")
-    detect_passport: bool = Field(default=True, description="Detect passport numbers")
-    detect_driver_license: bool = Field(default=True, description="Detect driver's license numbers")
-    detect_bank_account: bool = Field(default=True, description="Detect bank account numbers")
-    detect_medical_record: bool = Field(default=True, description="Detect medical record numbers")
-    detect_aws_keys: bool = Field(default=True, description="Detect AWS access keys")
-    detect_api_keys: bool = Field(default=True, description="Detect generic API keys")
-    detect_imei: bool = Field(default=True, description="Detect IMEI (International Mobile Equipment Identity) numbers")
 
     # Masking configuration
-    default_mask_strategy: MaskingStrategy = Field(default=MaskingStrategy.REDACT, description="Default masking strategy")
+    default_mask_strategy: MaskingStrategy = Field(default=MaskingStrategy.PARTIAL, description="Default masking strategy")
     redaction_text: str = Field(default="[REDACTED]", description="Text to use for redaction")
 
     # Behavior configuration
@@ -165,155 +127,70 @@ class PIIDetectorNA:
         self._compile_whitelist()
 
     def _compile_patterns(self) -> None:
-        """Compile regex patterns for PII detection."""
+        """Compile regex patterns for Canadian PII detection."""
         patterns = []
 
-        # Social Security Number patterns
-        if self.config.detect_ssn:
-            patterns.append(PIIPattern(type=PIIType.SSN, pattern=r"\b\d{3}-\d{2}-\d{4}\b", description="US Social Security Number", mask_strategy=MaskingStrategy.PARTIAL))
+        # Canadian Social Insurance Number (SIN)
+        # Format: XXX-XXX-XXX (9 digits with dashes)
+        if self.config.detect_sin:
+            patterns.extend([
+                PIIPattern(
+                    type=PIIType.SIN,
+                    pattern=r"\b\d{3}-\d{3}-\d{3}\b",
+                    description="Canadian SIN with dashes",
+                    mask_strategy=MaskingStrategy.PARTIAL
+                ),
+                PIIPattern(
+                    type=PIIType.SIN,
+                    pattern=r"\b(?:SIN|Social Insurance Number)[:\s#]+\d{3}[-\s]?\d{3}[-\s]?\d{3}\b",
+                    description="Canadian SIN with label",
+                    mask_strategy=MaskingStrategy.PARTIAL
+                ),
+            ])
 
-        # Note: BSN (Dutch) patterns removed - not applicable to North America
-        
-        # Credit Card patterns (basic validation for common formats)
-        if self.config.detect_credit_card:
-            patterns.append(PIIPattern(type=PIIType.CREDIT_CARD, pattern=r"\b(?:\d{4}[-\s]?){3}\d{4}\b", description="Credit card number", mask_strategy=MaskingStrategy.PARTIAL))
-
-        # Email patterns
-        if self.config.detect_email:
-            patterns.append(PIIPattern(type=PIIType.EMAIL, pattern=r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b", description="Email address", mask_strategy=MaskingStrategy.PARTIAL))
-
-        # Phone number patterns (US and international)
-        if self.config.detect_phone:
-            patterns.extend(
-                [
-                    PIIPattern(type=PIIType.PHONE, pattern=r"\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b", description="US phone number", mask_strategy=MaskingStrategy.PARTIAL),
-                    PIIPattern(type=PIIType.PHONE, pattern=r"\b\+?[1-9]\d{1,14}\b", description="International phone number", mask_strategy=MaskingStrategy.PARTIAL),
-                ]
-            )
-
-        # IP Address patterns (IPv4 and IPv6)
-        if self.config.detect_ip_address:
-            patterns.extend(
-                [
-                    PIIPattern(
-                        type=PIIType.IP_ADDRESS,
-                        pattern=r"\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b",
-                        description="IPv4 address",
-                        mask_strategy=MaskingStrategy.REDACT,
-                    ),
-                    PIIPattern(type=PIIType.IP_ADDRESS, pattern=r"\b(?:[A-Fa-f0-9]{1,4}:){7}[A-Fa-f0-9]{1,4}\b", description="IPv6 address", mask_strategy=MaskingStrategy.REDACT),
-                ]
-            )
-
-        # Date of Birth patterns
-        if self.config.detect_date_of_birth:
-            patterns.extend(
-                [
-                    PIIPattern(
-                        type=PIIType.DATE_OF_BIRTH,
-                        pattern=r"\b(?:DOB|Date of Birth|Born|Birthday)[:\s]+\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b",
-                        description="Date of birth with label",
-                        mask_strategy=MaskingStrategy.REDACT,
-                    ),
-                    PIIPattern(
-                        type=PIIType.DATE_OF_BIRTH,
-                        pattern=r"\b(?:0[1-9]|1[0-2])[-/](?:0[1-9]|[12]\d|3[01])[-/](?:19|20)\d{2}\b",
-                        description="Date in MM/DD/YYYY format",
-                        mask_strategy=MaskingStrategy.REDACT,
-                    ),
-                ]
-            )
-
-        # Passport patterns
-        if self.config.detect_passport:
-            patterns.append(PIIPattern(type=PIIType.PASSPORT, pattern=r"\b[A-Z]{1,2}\d{6,9}\b", description="Passport number", mask_strategy=MaskingStrategy.REDACT))
-
-        # Driver's License patterns (US states)
-        if self.config.detect_driver_license:
+        # Canadian Postal Code
+        # Format: A1A 1A1 (letter-digit-letter space digit-letter-digit)
+        if self.config.detect_canadian_postal_code:
             patterns.append(
                 PIIPattern(
-                    type=PIIType.DRIVER_LICENSE, pattern=r"\b(?:DL|License|Driver\'?s? License)[#:\s]+[A-Z0-9]{5,20}\b", description="Driver's license number", mask_strategy=MaskingStrategy.REDACT
+                    type=PIIType.CANADIAN_POSTAL_CODE,
+                    pattern=r"\b[A-Z]\d[A-Z]\s?\d[A-Z]\d\b",
+                    description="Canadian postal code",
+                    mask_strategy=MaskingStrategy.PARTIAL
                 )
             )
 
-        # Bank Account patterns
-        if self.config.detect_bank_account:
-            patterns.extend(
-                [
-                    PIIPattern(type=PIIType.BANK_ACCOUNT, pattern=r"\b\d{8,17}\b", description="Bank account number", mask_strategy=MaskingStrategy.REDACT),  # Generic bank account
-                    PIIPattern(type=PIIType.BANK_ACCOUNT, pattern=r"\b[A-Z]{2}\d{2}[A-Z0-9]{4}\d{7}(?:\d{3})?\b", description="IBAN", mask_strategy=MaskingStrategy.PARTIAL),  # IBAN
-                ]
-            )
-
-        # Medical Record patterns
-        if self.config.detect_medical_record:
-            patterns.append(
-                PIIPattern(type=PIIType.MEDICAL_RECORD, pattern=r"\b(?:MRN|Medical Record)[#:\s]+[A-Z0-9]{6,12}\b", description="Medical record number", mask_strategy=MaskingStrategy.REDACT)
-            )
-
-        # AWS Access Key patterns
-        if self.config.detect_aws_keys:
-            patterns.extend(
-                [
-                    PIIPattern(type=PIIType.AWS_KEY, pattern=r"\bAKIA[0-9A-Z]{16}\b", description="AWS Access Key ID", mask_strategy=MaskingStrategy.REDACT),
-                    PIIPattern(type=PIIType.AWS_KEY, pattern=r"\b[A-Za-z0-9/+=]{40}\b", description="AWS Secret Access Key", mask_strategy=MaskingStrategy.REDACT),
-                ]
-            )
-
-        # Generic API Key patterns
-        if self.config.detect_api_keys:
-            patterns.append(
+        # Canadian Health Card Numbers (varies by province)
+        # Ontario: 1234-567-890 (10 digits with dashes)
+        # Quebec: ABCD 1234 5678 (4 letters + 8 digits)
+        # BC: 9123456789 (10 digits)
+        if self.config.detect_canadian_health_card:
+            patterns.extend([
                 PIIPattern(
-                    type=PIIType.API_KEY,
-                    pattern=r'\b(?:api[_-]?key|apikey|api_token|access[_-]?token)[:\s]+[\'"]?[A-Za-z0-9\-_]{20,}[\'"]?\b',
-                    description="Generic API key",
-                    mask_strategy=MaskingStrategy.REDACT,
-                )
-            )
-
-        # IMEI (International Mobile Equipment Identity) patterns
-        # IMEI is a 15-digit number (14 digits + 1 check digit) or 17 digits with software version
-        # Format: XXXXXX-XX-XXXXXX-X or 15 consecutive digits
-        # IMEI (International Mobile Equipment Identity) patterns
-        # IMEI is a 15-digit number (14 digits + 1 check digit) or 17 digits with software version
-
-        if self.config.detect_imei:
-            patterns.extend(
-                [
-                    # IMEI value following IMEI label
-                    PIIPattern(
-                        type=PIIType.IMEI,
-                        pattern=r'(?<=\bIMEI[:\s#])\d{15}(?:\d{2})?\b',
-                        description="IMEI value",
-                        mask_strategy=MaskingStrategy.PARTIAL,
-                    ),
-
-                    # Device ID value
-                    PIIPattern(
-                        type=PIIType.IMEI,
-                        pattern=r'(?<=\bDevice ID[:\s#])\d{15}(?:\d{2})?\b',
-                        description="Device ID value",
-                        mask_strategy=MaskingStrategy.PARTIAL,
-                    ),
-
-                    # Equipment ID value
-                    PIIPattern(
-                        type=PIIType.IMEI,
-                        pattern=r'(?<=\bEquipment ID[:\s#])\d{15}(?:\d{2})?\b',
-                        description="Equipment ID value",
-                        mask_strategy=MaskingStrategy.PARTIAL,
-                    ),
-
-                    # Dashed IMEI format: XXXXXX-XX-XXXXXX-X
-                    PIIPattern(
-                        type=PIIType.IMEI,
-                        pattern=r'\b\d{6}-\d{2}-\d{6}-\d{1,3}\b',
-                        description="IMEI with dashes",
-                        mask_strategy=MaskingStrategy.PARTIAL,
-                    ),
-                ]
-            )
-            
+                    type=PIIType.CANADIAN_HEALTH_CARD,
+                    pattern=r"\b\d{4}-\d{3}-\d{3}\b",
+                    description="Ontario health card",
+                    mask_strategy=MaskingStrategy.PARTIAL
+                ),
+                PIIPattern(
+                    type=PIIType.CANADIAN_HEALTH_CARD,
+                    pattern=r"\b[A-Z]{4}\s?\d{4}\s?\d{4}\b",
+                    description="Quebec health card",
+                    mask_strategy=MaskingStrategy.PARTIAL
+                ),
+                PIIPattern(
+                    type=PIIType.CANADIAN_HEALTH_CARD,
+                    pattern=r"\b9\d{9}\b",
+                    description="BC health card",
+                    mask_strategy=MaskingStrategy.PARTIAL
+                ),
+                PIIPattern(
+                    type=PIIType.CANADIAN_HEALTH_CARD,
+                    pattern=r"\b(?:Health Card|HC)[:\s#]+[A-Z0-9\s-]{10,15}\b",
+                    description="Canadian health card with label",
+                    mask_strategy=MaskingStrategy.PARTIAL
+                ),
+            ])
 
         # Add custom patterns
         patterns.extend(self.config.custom_patterns)
@@ -428,39 +305,26 @@ class PIIDetectorNA:
 
         elif strategy == MaskingStrategy.PARTIAL:
             # Show partial information based on type
-            if pii_type == PIIType.SSN:
-                if len(value) >= 4:
-                    return f"***-**-{value[-4:]}"
+            if pii_type == PIIType.SIN:
+                # Canadian SIN: Show last 3 digits (XXX-XXX-123)
+                if len(value) >= 3:
+                    return f"***-***-{value[-3:]}"
                 return self.config.redaction_text
 
-            elif pii_type == PIIType.CREDIT_CARD:
-                if len(value) >= 4:
-                    return f"****-****-****-{value[-4:]}"
+            elif pii_type == PIIType.CANADIAN_POSTAL_CODE:
+                # Canadian Postal Code: Show first 3 characters (K1A XXX)
+                if len(value) >= 3:
+                    return f"{value[:3]} ***"
                 return self.config.redaction_text
 
-            elif pii_type == PIIType.EMAIL:
-                parts = value.split("@")
-                if len(parts) == 2:
-                    name = parts[0]
-                    if len(name) > 2:
-                        return f"{name[0]}***{name[-1]}@{parts[1]}"
-                    return f"***@{parts[1]}"
-                return self.config.redaction_text
-
-            elif pii_type == PIIType.PHONE:
-                if len(value) >= 4:
-                    return f"***-***-{value[-4:]}"
-                return self.config.redaction_text
-
-            elif pii_type == PIIType.IMEI:
-                # IMEI: Show last 4 digits for identification while hiding manufacturer info
-                # First 6 digits (TAC) identify manufacturer and model - must be hidden
-                if len(value) >= 4:
-                    return f"***********{value[-4:]}"
+            elif pii_type == PIIType.CANADIAN_HEALTH_CARD:
+                # Health Card: Show last 3 digits
+                if len(value) >= 3:
+                    return f"****-***-{value[-3:]}"
                 return self.config.redaction_text
 
             else:
-                # For other types, show first and last characters
+                # For custom types, show first and last characters
                 if len(value) > 2:
                     return f"{value[0]}{'*' * (len(value) - 2)}{value[-1]}"
                 return self.config.redaction_text
