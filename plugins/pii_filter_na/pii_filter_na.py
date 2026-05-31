@@ -433,11 +433,6 @@ class PIIDetectorNA:
                     return f"***-**-{value[-4:]}"
                 return self.config.redaction_text
 
-            elif pii_type == PIIType.BSN:
-                if len(value) >= 4:
-                    return f"*****{value[-4:]}"
-                return self.config.redaction_text
-
             elif pii_type == PIIType.CREDIT_CARD:
                 if len(value) >= 4:
                     return f"****-****-****-{value[-4:]}"
