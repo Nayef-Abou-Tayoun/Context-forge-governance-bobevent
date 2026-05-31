@@ -79,7 +79,7 @@ plugins:
       detect_ip_address: false  # Disabled for development
       detect_aws_keys: true
       detect_api_keys: true
-      detect_imei: false  # Disabled - handled by PIIFilterNAPlugin with partial masking
+      detect_imei: true  # Detect IMEI device identifiers
       # Masking Settings
       default_mask_strategy: "partial"  # redact | partial | hash | tokenize | remove
       redaction_text: "[PII_REDACTED]"
