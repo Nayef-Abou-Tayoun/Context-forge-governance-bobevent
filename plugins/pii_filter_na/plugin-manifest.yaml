@@ -1,0 +1,110 @@
+name: "PIIFilterNAPlugin"
+version: "1.0.0"
+description: "North America-specific PII detection and masking plugin"
+author: "ContextForge Team"
+license: "Apache-2.0"
+
+# Plugin hooks
+hooks:
+  - prompt_pre_fetch
+  - prompt_post_fetch
+  - tool_pre_invoke
+  - tool_post_invoke
+
+# Tags for categorization
+tags:
+  - security
+  - pii
+  - compliance
+  - north-america
+  - gdpr
+  - hipaa
+  - privacy
+
+# Dependencies
+dependencies: []
+
+# Configuration schema
+config_schema:
+  # US-specific PII types
+  detect_ssn:
+    type: boolean
+    default: true
+    description: "Detect US Social Security Numbers"
+  
+  detect_ein:
+    type: boolean
+    default: true
+    description: "Detect US Employer Identification Numbers"
+  
+  detect_itin:
+    type: boolean
+    default: true
+    description: "Detect US Individual Taxpayer Identification Numbers"
+  
+  # Canada-specific PII types
+  detect_sin:
+    type: boolean
+    default: true
+    description: "Detect Canadian Social Insurance Numbers"
+  
+  detect_canadian_postal_code:
+    type: boolean
+    default: true
+    description: "Detect Canadian postal codes"
+  
+  detect_canadian_health_card:
+    type: boolean
+    default: true
+    description: "Detect Canadian health card numbers"
+  
+  # Common North America PII types
+  detect_credit_card:
+    type: boolean
+    default: true
+    description: "Detect credit card numbers"
+  
+  detect_email:
+    type: boolean
+    default: true
+    description: "Detect email addresses"
+  
+  detect_phone:
+    type: boolean
+    default: true
+    description: "Detect phone numbers"
+  
+  detect_ip_address:
+    type: boolean
+    default: true
+    description: "Detect IP addresses"
+  
+  # Masking configuration
+  default_mask_strategy:
+    type: string
+    default: "partial"
+    enum: ["redact", "partial", "hash", "tokenize", "remove"]
+    description: "Default masking strategy"
+  
+  redaction_text:
+    type: string
+    default: "[REDACTED]"
+    description: "Text to use for redaction"
+  
+  # Behavior configuration
+  block_on_detection:
+    type: boolean
+    default: false
+    description: "Block request if PII is detected"
+  
+  log_detections:
+    type: boolean
+    default: true
+    description: "Log PII detections"
+  
+  include_detection_details:
+    type: boolean
+    default: true
+    description: "Include detection details in metadata"
+
+# Made with Bob

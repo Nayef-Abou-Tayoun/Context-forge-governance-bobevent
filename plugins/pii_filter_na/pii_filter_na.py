@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Location: ./plugins/pii_filter/pii_filter.py
+"""Location: ./plugins/pii_filter_na/pii_filter_na.py
 Copyright 2025
 SPDX-License-Identifier: Apache-2.0
 Authors: Mihai Criveti
 
-PII Filter Plugin for ContextForge.
-This plugin detects and masks Personally Identifiable Information (PII) in prompts
-and their responses, including SSNs, credit cards, emails, phone numbers, and more.
+North America PII Filter Plugin for ContextForge.
+This plugin detects and masks Personally Identifiable Information (PII) specific to
+North America, including Canadian SIN, US EIN, Canadian postal codes, and more.
 """
 
 # Standard
@@ -59,10 +59,19 @@ except Exception as e:
 
 
 class PIIType(str, Enum):
-    """Types of PII that can be detected."""
+    """Types of PII that can be detected - North America specific."""
 
+    # US-specific
     SSN = "ssn"
-    BSN = "bsn"
+    EIN = "ein"  # US Employer Identification Number
+    ITIN = "itin"  # US Individual Taxpayer Identification Number
+    
+    # Canada-specific
+    SIN = "sin"  # Canadian Social Insurance Number
+    CANADIAN_POSTAL_CODE = "canadian_postal_code"
+    CANADIAN_HEALTH_CARD = "canadian_health_card"
+    
+    # Common North America
     CREDIT_CARD = "credit_card"
     EMAIL = "email"
     PHONE = "phone"
@@ -98,12 +107,20 @@ class PIIPattern(BaseModel):
     enabled: bool = True
 
 
-class PIIFilterConfig(BaseModel):
-    """Configuration for the PII Filter plugin."""
+class PIIFilterNAConfig(BaseModel):
+    """Configuration for the North America PII Filter plugin."""
 
-    # Enable/disable detection for specific PII types
-    detect_ssn: bool = Field(default=True, description="Detect Social Security Numbers")
-    detect_bsn: bool = Field(default=True, description="Detect Dutch BSN (Burgerservicenummer)")
+    # US-specific PII types
+    detect_ssn: bool = Field(default=True, description="Detect US Social Security Numbers")
+    detect_ein: bool = Field(default=True, description="Detect US Employer Identification Numbers")
+    detect_itin: bool = Field(default=True, description="Detect US Individual Taxpayer Identification Numbers")
+    
+    # Canada-specific PII types
+    detect_sin: bool = Field(default=True, description="Detect Canadian Social Insurance Numbers")
+    detect_canadian_postal_code: bool = Field(default=True, description="Detect Canadian postal codes")
+    detect_canadian_health_card: bool = Field(default=True, description="Detect Canadian health card numbers")
+    
+    # Common North America PII types
     detect_credit_card: bool = Field(default=True, description="Detect credit card numbers")
     detect_email: bool = Field(default=True, description="Detect email addresses")
     detect_phone: bool = Field(default=True, description="Detect phone numbers")
@@ -133,14 +150,14 @@ class PIIFilterConfig(BaseModel):
     whitelist_patterns: List[str] = Field(default_factory=list, description="Patterns to exclude from PII detection")
 
 
-class PIIDetector:
-    """Core PII detection logic."""
+class PIIDetectorNA:
+    """Core PII detection logic for North America."""
 
-    def __init__(self, config: PIIFilterConfig):
+    def __init__(self, config: PIIFilterNAConfig):
         """Initialize the PII detector with configuration.
 
         Args:
-            config: PII filter configuration
+            config: North America PII filter configuration
         """
         self.config = config
         self.patterns: Dict[PIIType, List[Tuple[Pattern, MaskingStrategy]]] = {}
@@ -502,27 +519,27 @@ class PIIDetector:
         return self.config.redaction_text
 
 
-class PIIFilterPlugin(Plugin):
-    """PII Filter plugin for detecting and masking sensitive information."""
+class PIIFilterNAPlugin(Plugin):
+    """North America PII Filter plugin for detecting and masking sensitive information."""
 
     def __init__(self, config: PluginConfig):
-        """Initialize the PII filter plugin.
+        """Initialize the North America PII filter plugin.
 
         Args:
             config: Plugin configuration
         """
         super().__init__(config)
-        self.pii_config = PIIFilterConfig.model_validate(self._config.config)
+        self.pii_config = PIIFilterNAConfig.model_validate(self._config.config)
 
         # Auto-detect and use Rust implementation if available
         if _RUST_AVAILABLE and _RustPIIDetector is not None:
             self.detector = _RustPIIDetector(self.pii_config)
             self.implementation = "Rust"
-            logger.info("🦀 PIIFilterPlugin initialized with Rust acceleration (5-100x speedup)")
+            logger.info("🦀 PIIFilterNAPlugin initialized with Rust acceleration (5-100x speedup)")
         else:
-            self.detector = PIIDetector(self.pii_config)
+            self.detector = PIIDetectorNA(self.pii_config)
             self.implementation = "Python"
-            logger.info("🐍 PIIFilterPlugin initialized with Python implementation")
+            logger.info("🐍 PIIFilterNAPlugin initialized with Python implementation")
 
         self.detection_count = 0
         self.masked_count = 0

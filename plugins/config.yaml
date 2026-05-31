@@ -88,6 +88,52 @@ plugins:
       log_detections: true
       include_detection_details: true
       # Whitelist common test values
+  # PII Filter NA Plugin - North America specific PII detection
+  - name: "PIIFilterNAPlugin"
+    kind: "plugins.pii_filter_na.pii_filter_na.PIIFilterNAPlugin"
+    description: "Detects and masks North America-specific Personally Identifiable Information"
+    version: "1.0.0"
+    author: "ContextForge Team"
+    hooks: ["prompt_pre_fetch", "prompt_post_fetch", "tool_pre_invoke", "tool_post_invoke"]
+    tags: ["security", "pii", "compliance", "north-america", "gdpr", "hipaa", "canada", "usa"]
+    mode: "disabled"  # enforce | permissive | disabled
+    priority: 51  # Run right after global PII filter
+    conditions:
+      - prompts: []  # Empty list = apply to all prompts
+        server_ids: []  # Apply to all servers
+        tenant_ids: []  # Apply to all tenants
+    config:
+      # US-specific PII Detection
+      detect_ssn: true
+      detect_ein: true
+      detect_itin: true
+      
+      # Canada-specific PII Detection
+      detect_sin: true
+      detect_canadian_postal_code: true
+      detect_canadian_health_card: true
+      
+      # Common North America PII Detection
+      detect_credit_card: true
+      detect_email: true
+      detect_phone: true
+      detect_ip_address: false  # Disabled for development
+      detect_aws_keys: true
+      detect_api_keys: true
+      detect_imei: true
+      
+      # Masking Settings
+      default_mask_strategy: "partial"  # redact | partial | hash | tokenize | remove
+      redaction_text: "[REDACTED]"
+      
+      # Behavior Settings
+      block_on_detection: false  # Set true to block requests with PII
+      log_detections: true
+      include_detection_details: true
+      
+      # Whitelist patterns (for testing/development)
+      whitelist_patterns: []
+
       whitelist_patterns:
         - "test@example.com"
         - "555-555-5555"
