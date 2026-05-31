@@ -65,6 +65,10 @@ class PIIType(str, Enum):
     SIN = "sin"  # Canadian Social Insurance Number
     CANADIAN_POSTAL_CODE = "canadian_postal_code"
     CANADIAN_HEALTH_CARD = "canadian_health_card"
+    
+    # Device identifiers
+    IMEI = "imei"  # International Mobile Equipment Identity
+    
     CUSTOM = "custom"
 
 
@@ -95,6 +99,9 @@ class PIIFilterNAConfig(BaseModel):
     detect_sin: bool = Field(default=True, description="Detect Canadian Social Insurance Numbers")
     detect_canadian_postal_code: bool = Field(default=True, description="Detect Canadian postal codes")
     detect_canadian_health_card: bool = Field(default=True, description="Detect Canadian health card numbers")
+    
+    # Device identifiers
+    detect_imei: bool = Field(default=True, description="Detect IMEI (International Mobile Equipment Identity) numbers")
 
     # Masking configuration
     default_mask_strategy: MaskingStrategy = Field(default=MaskingStrategy.PARTIAL, description="Default masking strategy")
@@ -189,6 +196,40 @@ class PIIDetectorNA:
                     pattern=r"\b(?:Health Card|HC)[:\s#]+[A-Z0-9\s-]{10,15}\b",
                     description="Canadian health card with label",
                     mask_strategy=MaskingStrategy.PARTIAL
+                ),
+            ])
+
+        # IMEI (International Mobile Equipment Identity) patterns
+        # IMEI is a 15-digit number (14 digits + 1 check digit) or 17 digits with software version
+        if self.config.detect_imei:
+            patterns.extend([
+                # IMEI value following IMEI label
+                PIIPattern(
+                    type=PIIType.IMEI,
+                    pattern=r'(?<=\bIMEI[:\s#])\d{15}(?:\d{2})?\b',
+                    description="IMEI value",
+                    mask_strategy=MaskingStrategy.PARTIAL,
+                ),
+                # Device ID value
+                PIIPattern(
+                    type=PIIType.IMEI,
+                    pattern=r'(?<=\bDevice ID[:\s#])\d{15}(?:\d{2})?\b',
+                    description="Device ID value",
+                    mask_strategy=MaskingStrategy.PARTIAL,
+                ),
+                # Equipment ID value
+                PIIPattern(
+                    type=PIIType.IMEI,
+                    pattern=r'(?<=\bEquipment ID[:\s#])\d{15}(?:\d{2})?\b',
+                    description="Equipment ID value",
+                    mask_strategy=MaskingStrategy.PARTIAL,
+                ),
+                # Dashed IMEI format: XXXXXX-XX-XXXXXX-X
+                PIIPattern(
+                    type=PIIType.IMEI,
+                    pattern=r'\b\d{6}-\d{2}-\d{6}-\d{1,3}\b',
+                    description="IMEI with dashes",
+                    mask_strategy=MaskingStrategy.PARTIAL,
                 ),
             ])
 
@@ -321,6 +362,13 @@ class PIIDetectorNA:
                 # Health Card: Show last 3 digits
                 if len(value) >= 3:
                     return f"****-***-{value[-3:]}"
+                return self.config.redaction_text
+
+            elif pii_type == PIIType.IMEI:
+                # IMEI: Show last 4 digits (***********4567)
+                # First 6 digits (TAC) identify manufacturer and model - must be hidden
+                if len(value) >= 4:
+                    return f"***********{value[-4:]}"
                 return self.config.redaction_text
 
             else:
