@@ -1,0 +1,19 @@
+name: TokenCostCalculatorPlugin
+version: 1.0.0
+description: Calculates and displays token costs for tool invocations
+author: ContextForge Team
+hooks:
+  - tool_post_invoke
+config_schema:
+  type: object
+  properties:
+    cost_per_token:
+      type: number
+      default: 0.000001
+      description: Cost per token in USD
+    display_in_metadata:
+      type: boolean
+      default: true
+      description: Whether to add cost information to metadata
+
+# Made with Bob

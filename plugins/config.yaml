@@ -15,6 +15,24 @@ plugin_settings:
   plugin_health_check_interval: 120
   include_user_info: false
 
+  # Token Cost Calculator - Display token costs in agent chat
+  - name: "TokenCostCalculatorPlugin"
+    kind: "plugins.token_cost_calculator.token_cost_calculator.TokenCostCalculatorPlugin"
+    description: "Calculates and displays token costs for tool invocations"
+    version: "1.0.0"
+    author: "ContextForge Team"
+    hooks: ["tool_post_invoke"]
+    tags: ["cost", "tokens", "billing", "observability"]
+    mode: "enforce"
+    priority: 100
+    conditions:
+      - prompts: []
+        server_ids: []
+        tenant_ids: []
+    config:
+      cost_per_token: 0.000001
+      display_in_metadata: true
+
 plugins:
   # Argument Normalizer - stabilize inputs before anything else
   - name: "ArgumentNormalizer"
