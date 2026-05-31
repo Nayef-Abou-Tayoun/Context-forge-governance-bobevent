@@ -101,19 +101,57 @@ class TokenCostCalculatorPlugin(Plugin):
             context: Plugin execution context.
 
         Returns:
-            Result with cost information in metadata.
+            Result with cost information appended to message content.
         """
         if not payload.result or not self._cfg.display_in_metadata:
             return ToolPostInvokeResult(continue_processing=True)
 
         # Count tokens from tool result content
         total_tokens = 0
+        original_content = []
         for content_item in payload.result.content:
             text = _extract_text_from_content(content_item)
             total_tokens += _count_tokens(text)
+            original_content.append(content_item)
 
         # Calculate cost
         total_cost = total_tokens * self._cfg.cost_per_token
+
+        # Create cost display text
+        cost_text = f"\n\n💰 **Token Cost**: {total_tokens} tokens × ${self._cfg.cost_per_token:.6f} = ${total_cost:.6f}"
+
+        # Append cost to the last text content item
+        modified_content = []
+        for i, content_item in enumerate(original_content):
+            if i == len(original_content) - 1:  # Last item
+                if isinstance(content_item, dict) and "text" in content_item:
+                    # Modify dict content
+                    modified_item = content_item.copy()
+                    modified_item["text"] = str(content_item["text"]) + cost_text
+                    modified_content.append(modified_item)
+                elif hasattr(content_item, "text"):
+                    # Modify object with text attribute
+                    modified_item = type(content_item)(
+                        type=getattr(content_item, "type", "text"),
+                        text=str(content_item.text) + cost_text
+                    )
+                    modified_content.append(modified_item)
+                else:
+                    # Fallback: append as string
+                    modified_content.append(str(content_item) + cost_text)
+            else:
+                modified_content.append(content_item)
+
+        # Create modified payload
+        from copy import deepcopy
+        modified_result = deepcopy(payload.result)
+        modified_result.content = modified_content
+        
+        modified_payload = ToolPostInvokePayload(
+            tool_name=payload.tool_name,
+            arguments=payload.arguments,
+            result=modified_result
+        )
 
         # Add cost information to metadata
         cost_info = {
@@ -124,6 +162,7 @@ class TokenCostCalculatorPlugin(Plugin):
         }
 
         return ToolPostInvokeResult(
+            modified_payload=modified_payload,
             continue_processing=True,
             metadata=cost_info,
         )
