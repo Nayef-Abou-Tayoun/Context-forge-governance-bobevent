@@ -32,14 +32,16 @@ if ibmcloud ce secret get --name $SECRET_NAME &>/dev/null; then
         --from-literal HMAC_SECRET_ACCESS_KEY="$HMAC_SECRET_ACCESS_KEY" \
         --from-literal COS_ENDPOINT="$COS_ENDPOINT" \
         --from-literal COS_BUCKET="$COS_BUCKET" \
-        --from-literal COS_PREFIX="plugins/"
+        --from-literal COS_PREFIX="plugins/" \
+        --from-literal PLUGIN_DIR="/tmp/plugins"
 else
     ibmcloud ce secret create --name $SECRET_NAME \
         --from-literal HMAC_ACCESS_KEY_ID="$HMAC_ACCESS_KEY_ID" \
         --from-literal HMAC_SECRET_ACCESS_KEY="$HMAC_SECRET_ACCESS_KEY" \
         --from-literal COS_ENDPOINT="$COS_ENDPOINT" \
         --from-literal COS_BUCKET="$COS_BUCKET" \
-        --from-literal COS_PREFIX="plugins/"
+        --from-literal COS_PREFIX="plugins/" \
+        --from-literal PLUGIN_DIR="/tmp/plugins"
 fi
 echo "✓ Secret created/updated"
 
@@ -74,8 +76,8 @@ echo "Current image: $CURRENT_IMAGE"
 ibmcloud ce application update --name $APP_NAME \
     --env-from-secret $SECRET_NAME \
     --env PLUGINS_ENABLED=true \
-    --env PLUGINS_CONFIG_FILE=/app/plugins/config.yaml \
-    --mount-configmap /app/plugins=$CONFIGMAP_NAME \
+    --env PLUGINS_CONFIG_FILE=/tmp/config.yaml \
+    --mount-configmap /tmp=$CONFIGMAP_NAME \
     --command /bin/bash \
     --argument "-c" \
     --argument "pip install s3cmd && bash /app/scripts/sync-plugins-from-cos.sh && exec python -m mcpgateway.main"
