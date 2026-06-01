@@ -5,10 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 
 Token Cost Calculator Plugin.
 
-Calculates and displays token costs for agent responses.
+Calculates and displays token costs for tool responses.
 Cost per token: $0.000001
 
-Hook: agent_post_invoke
+Hook: tool_post_invoke
 """
 
 # Future
@@ -27,9 +27,9 @@ from mcpgateway.plugins.framework import (
     PluginConfig,
     PluginContext,
 )
-from mcpgateway.plugins.framework.hooks.agents import (
-    AgentPostInvokePayload,
-    AgentPostInvokeResult,
+from mcpgateway.plugins.framework.hooks.tools import (
+    ToolPostInvokePayload,
+    ToolPostInvokeResult,
 )
 
 
@@ -95,43 +95,53 @@ class TokenCostCalculatorPlugin(Plugin):
         super().__init__(config)
         self._cfg = TokenCostConfig(**(config.config or {}))
 
-    async def agent_post_invoke(self, payload: AgentPostInvokePayload, context: PluginContext) -> AgentPostInvokeResult:
-        """Calculate token cost after agent responds.
+    async def tool_post_invoke(self, payload: ToolPostInvokePayload, context: PluginContext) -> ToolPostInvokeResult:
+        """Calculate token cost after tool execution.
 
         Args:
-            payload: Agent response payload containing messages.
+            payload: Tool response payload containing result content.
             context: Plugin execution context.
 
         Returns:
             Result with cost information in metadata.
         """
-        if not payload.messages or not self._cfg.display_in_metadata:
-            return AgentPostInvokeResult(continue_processing=True)
+        if not payload.result or not self._cfg.display_in_metadata:
+            return ToolPostInvokeResult(continue_processing=True)
 
-        # Count tokens from all agent messages
+        # Count tokens from tool result content (not from our own cost display)
         total_tokens = 0
-        for message in payload.messages:
-            # Extract content from message (supports both dict and object formats)
-            content = None
-            if isinstance(message, dict):
-                content = message.get("content", "")
-            elif hasattr(message, "content"):
-                content = message.content
-            
-            if content:
-                # Handle content that might be a list or string
+        
+        # Extract text from the tool result
+        result_content = payload.result
+        if isinstance(result_content, dict):
+            # Handle dict results - look for content fields
+            if "content" in result_content:
+                content = result_content["content"]
                 if isinstance(content, list):
                     for item in content:
                         text = _extract_text_from_content(item)
                         total_tokens += _count_tokens(text)
                 else:
-                    text = str(content)
+                    text = _extract_text_from_content(content)
                     total_tokens += _count_tokens(text)
+            else:
+                # Count all dict content
+                text = json.dumps(result_content)
+                total_tokens += _count_tokens(text)
+        elif isinstance(result_content, list):
+            # Handle list results
+            for item in result_content:
+                text = _extract_text_from_content(item)
+                total_tokens += _count_tokens(text)
+        else:
+            # Handle string or other results
+            text = str(result_content)
+            total_tokens += _count_tokens(text)
 
         # Calculate cost
         total_cost = total_tokens * self._cfg.cost_per_token
 
-        # Add cost information to metadata (don't modify the response content)
+        # Add cost information to metadata
         cost_info = {
             "token_count": total_tokens,
             "cost_per_token": self._cfg.cost_per_token,
@@ -139,7 +149,7 @@ class TokenCostCalculatorPlugin(Plugin):
             "cost_display": f"${total_cost:.6f}",
         }
 
-        return AgentPostInvokeResult(
+        return ToolPostInvokeResult(
             continue_processing=True,
             metadata=cost_info,
         )

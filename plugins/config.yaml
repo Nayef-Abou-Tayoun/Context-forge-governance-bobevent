@@ -16,13 +16,13 @@ plugin_settings:
   include_user_info: false
 
 plugins:
-  # Token Cost Calculator - Display token costs in agent chat
+  # Token Cost Calculator - Display token costs in tool responses
   - name: "TokenCostCalculatorPlugin"
     kind: "plugins.token_cost_calculator.token_cost_calculator.TokenCostCalculatorPlugin"
-    description: "Calculates and displays token costs for agent responses"
+    description: "Calculates and displays token costs for tool responses"
     version: "1.0.0"
     author: "ContextForge Team"
-    hooks: ["agent_post_invoke"]
+    hooks: ["tool_post_invoke"]
     tags: ["cost", "tokens", "billing", "observability"]
     mode: "enforce"
     priority: 100
