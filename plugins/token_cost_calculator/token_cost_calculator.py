@@ -157,17 +157,37 @@ class TokenCostCalculatorPlugin(Plugin):
             cost_text = f"\n\n---\n💰 **Token Cost**: {total_tokens} tokens × ${self._cfg.cost_per_token:.6f} = ${total_cost:.6f}"
 
             # Append cost information to the response content
-            modified_result = payload.result
+            # Deep copy the result to avoid modifying the original
+            import copy
+            modified_result = copy.deepcopy(payload.result)
+            
             if isinstance(modified_result, dict) and "content" in modified_result:
                 content = modified_result["content"]
                 if isinstance(content, list) and len(content) > 0:
+                    # Convert Pydantic models to dicts if needed
+                    content_list = []
+                    for item in content:
+                        if hasattr(item, 'model_dump'):
+                            # Pydantic v2 model
+                            content_list.append(item.model_dump())
+                        elif hasattr(item, 'dict'):
+                            # Pydantic v1 model
+                            content_list.append(item.dict())
+                        elif isinstance(item, dict):
+                            content_list.append(item)
+                        else:
+                            content_list.append({"type": "text", "text": str(item)})
+                    
                     # Append to the last text content item
-                    last_item = content[-1]
+                    last_item = content_list[-1]
                     if isinstance(last_item, dict) and last_item.get("type") == "text":
                         last_item["text"] = str(last_item.get("text", "")) + cost_text
                     else:
                         # Add new text content item
-                        content.append({"type": "text", "text": cost_text})
+                        content_list.append({"type": "text", "text": cost_text})
+                    
+                    # Replace content with modified list
+                    modified_result["content"] = content_list
                 elif isinstance(content, str):
                     modified_result["content"] = content + cost_text
             elif isinstance(modified_result, str):
