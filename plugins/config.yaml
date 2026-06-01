@@ -26,10 +26,7 @@ plugins:
     tags: ["cost", "tokens", "billing", "observability"]
     mode: "enforce"
     priority: 100
-    conditions:
-      - prompts: []
-        server_ids: []
-        tenant_ids: []
+    conditions: []
     config:
       cost_per_token: 0.000001
       display_in_metadata: true
