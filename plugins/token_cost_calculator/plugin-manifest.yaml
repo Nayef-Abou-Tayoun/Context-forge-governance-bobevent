@@ -2,7 +2,7 @@ name: TokenCostCalculatorPlugin
 version: 1.0.0
 description: Calculates and displays token costs for tool responses
 author: ContextForge Team
-hooks:
+available_hooks:
   - tool_pre_invoke
   - tool_post_invoke
 config_schema:
