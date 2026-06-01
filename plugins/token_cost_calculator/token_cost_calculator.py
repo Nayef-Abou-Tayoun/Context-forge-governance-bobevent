@@ -96,14 +96,14 @@ class TokenCostCalculatorPlugin(Plugin):
         self._cfg = TokenCostConfig(**(config.config or {}))
 
     async def tool_post_invoke(self, payload: ToolPostInvokePayload, context: PluginContext) -> ToolPostInvokeResult:
-        """Calculate token cost after tool execution.
+        """Calculate token cost after tool execution and append to response content.
 
         Args:
             payload: Tool response payload containing result content.
             context: Plugin execution context.
 
         Returns:
-            Result with cost information in metadata.
+            Result with cost information appended to content and in metadata.
         """
         if not payload.result or not self._cfg.display_in_metadata:
             return ToolPostInvokeResult(continue_processing=True)
@@ -141,6 +141,26 @@ class TokenCostCalculatorPlugin(Plugin):
         # Calculate cost
         total_cost = total_tokens * self._cfg.cost_per_token
 
+        # Create cost display text
+        cost_text = f"\n\n---\n💰 **Token Cost**: {total_tokens} tokens × ${self._cfg.cost_per_token:.6f} = ${total_cost:.6f}"
+
+        # Append cost information to the response content
+        modified_result = payload.result
+        if isinstance(modified_result, dict) and "content" in modified_result:
+            content = modified_result["content"]
+            if isinstance(content, list) and len(content) > 0:
+                # Append to the last text content item
+                last_item = content[-1]
+                if isinstance(last_item, dict) and last_item.get("type") == "text":
+                    last_item["text"] = str(last_item.get("text", "")) + cost_text
+                else:
+                    # Add new text content item
+                    content.append({"type": "text", "text": cost_text})
+            elif isinstance(content, str):
+                modified_result["content"] = content + cost_text
+        elif isinstance(modified_result, str):
+            modified_result = modified_result + cost_text
+
         # Add cost information to metadata
         cost_info = {
             "token_count": total_tokens,
@@ -151,6 +171,7 @@ class TokenCostCalculatorPlugin(Plugin):
 
         return ToolPostInvokeResult(
             continue_processing=True,
+            result=modified_result,
             metadata=cost_info,
         )
 
