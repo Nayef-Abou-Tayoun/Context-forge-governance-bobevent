@@ -202,9 +202,13 @@ class TokenCostCalculatorPlugin(Plugin):
             }
 
             logger.info(f"Returning modified result with cost info: {cost_info}")
+            
+            # Create a new payload with the modified result (like PII filter does)
+            modified_payload = payload.model_copy(update={"result": modified_result})
+            
             return ToolPostInvokeResult(
                 continue_processing=True,
-                result=modified_result,
+                modified_payload=modified_payload,
                 metadata=cost_info,
             )
         except Exception as e:
