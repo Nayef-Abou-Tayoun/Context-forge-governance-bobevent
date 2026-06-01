@@ -105,39 +105,6 @@ plugins:
       block_on_detection: false  # Set to true for strict compliance
       log_detections: true
       include_detection_details: true
-  # TT PII Filter Plugin - Custom TT Type detection (External plugin from COS)
-  - name: "TTPIIFilterPlugin"
-    kind: "plugins.external.tt_pii_filter.tt_pii_filter.TTPIIFilterPlugin"
-    description: "TT - Detects and masks Personally Identifiable Information including custom TT Type"
-    version: "0.1.0"
-    author: "Mihai Criveti"
-    hooks: ["prompt_pre_fetch", "prompt_post_fetch", "tool_pre_invoke", "tool_post_invoke"]
-    tags: ["security", "pii", "compliance", "filter", "tt_type"]
-    mode: "enforce"  # enforce | permissive | disabled - Plugin is now enabled
-    priority: 49  # Higher priority than standard PII filter
-    conditions:
-      - prompts: []  # Empty list = apply to all prompts
-        server_ids: []  # Apply to all servers
-        tenant_ids: []  # Apply to all tenants
-    config:
-      # PII Detection Settings
-      detect_ssn: true
-      detect_credit_card: true
-      detect_email: true
-      detect_phone: false
-      detect_ip_address: false
-      detect_aws_keys: true
-      detect_api_keys: true
-      detect_imei: true
-      detect_tt_type: true  # Custom TT Type detection (e.g., s373-2312-r543)
-      # Masking Settings
-      default_mask_strategy: "partial"  # redact | partial | hash | tokenize | remove
-      redaction_text: "[PII_REDACTED]"
-      # Behavior Settings
-      block_on_detection: false  # Set to true for strict compliance
-      log_detections: true
-      include_detection_details: true
-      # Whitelist common test values
   # PII Filter NA Plugin - North America specific PII detection
   - name: "PIIFilterNAPlugin"
     kind: "plugins.pii_filter_na.pii_filter_na.PIIFilterNAPlugin"
