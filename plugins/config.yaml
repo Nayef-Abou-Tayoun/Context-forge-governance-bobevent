@@ -22,7 +22,7 @@ plugins:
     description: "Calculates and displays token costs for agent responses"
     version: "1.0.0"
     author: "ContextForge Team"
-    hooks: ["tool_post_invoke"]
+    hooks: ["agent_post_invoke"]
     tags: ["cost", "tokens", "billing", "observability"]
     mode: "enforce"
     priority: 100
