@@ -109,7 +109,7 @@ class TokenCostCalculatorPlugin(Plugin):
             Result with cost information appended to content and in metadata.
         """
         logger.info("TokenCostCalculatorPlugin.tool_post_invoke called")
-        logger.info(f"Tool name: {payload.tool_name}")
+        logger.info(f"Tool name: {payload.name}")
         logger.info(f"Payload result type: {type(payload.result)}")
         
         try:
