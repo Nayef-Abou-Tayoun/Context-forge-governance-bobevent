@@ -109,10 +109,15 @@ class TokenCostCalculatorPlugin(Plugin):
             Result with cost information appended to content and in metadata.
         """
         logger.info("TokenCostCalculatorPlugin.tool_post_invoke called")
+        logger.info(f"Tool name: {payload.tool_name}")
         logger.info(f"Payload result type: {type(payload.result)}")
-        logger.info(f"Payload result: {payload.result}")
         
         try:
+            # Only count tokens for ServiceNow tools
+            if not payload.tool_name or "servicenow" not in payload.tool_name.lower():
+                logger.info(f"Skipping token count for non-ServiceNow tool: {payload.tool_name}")
+                return ToolPostInvokeResult(continue_processing=True)
+            
             if not payload.result:
                 logger.warning("No result in payload, returning early")
                 return ToolPostInvokeResult(continue_processing=True)
