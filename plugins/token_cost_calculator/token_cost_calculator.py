@@ -105,7 +105,7 @@ class TokenCostCalculatorPlugin(Plugin):
         Returns:
             Result with cost information appended to content and in metadata.
         """
-        if not payload.result or not self._cfg.display_in_metadata:
+        if not payload.result:
             return ToolPostInvokeResult(continue_processing=True)
 
         # Count tokens from tool result content (not from our own cost display)
