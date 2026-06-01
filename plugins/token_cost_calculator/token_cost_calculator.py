@@ -113,11 +113,6 @@ class TokenCostCalculatorPlugin(Plugin):
         logger.info(f"Payload result type: {type(payload.result)}")
         
         try:
-            # Only count tokens for ServiceNow tools
-            if not payload.tool_name or "servicenow" not in payload.tool_name.lower():
-                logger.info(f"Skipping token count for non-ServiceNow tool: {payload.tool_name}")
-                return ToolPostInvokeResult(continue_processing=True)
-            
             if not payload.result:
                 logger.warning("No result in payload, returning early")
                 return ToolPostInvokeResult(continue_processing=True)
