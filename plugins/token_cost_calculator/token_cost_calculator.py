@@ -29,6 +29,8 @@ from mcpgateway.plugins.framework import (
     PluginContext,
 )
 from mcpgateway.plugins.framework.hooks.tools import (
+    ToolPreInvokePayload,
+    ToolPreInvokeResult,
     ToolPostInvokePayload,
     ToolPostInvokeResult,
 )
@@ -98,6 +100,35 @@ class TokenCostCalculatorPlugin(Plugin):
         super().__init__(config)
         self._cfg = TokenCostConfig(**(config.config or {}))
 
+    async def tool_pre_invoke(self, payload: ToolPreInvokePayload, context: PluginContext) -> ToolPreInvokeResult:
+        """Count input tokens before tool execution.
+
+        Args:
+            payload: Tool input payload containing arguments.
+            context: Plugin execution context.
+
+        Returns:
+            Result with input token count stored in context.
+        """
+        logger.info(f"TokenCostCalculatorPlugin.tool_pre_invoke called for tool: {payload.name}")
+        
+        try:
+            # Count tokens from tool arguments
+            input_tokens = 0
+            if payload.args:
+                args_text = json.dumps(payload.args)
+                input_tokens = _count_tokens(args_text)
+                logger.info(f"Input tokens for {payload.name}: {input_tokens}")
+            
+            # Store input tokens in context for use in post_invoke
+            context.metadata["input_tokens"] = input_tokens
+            
+        except Exception as e:
+            logger.error(f"Error counting input tokens: {e}", exc_info=True)
+            context.metadata["input_tokens"] = 0
+        
+        return ToolPreInvokeResult(continue_processing=True)
+
     async def tool_post_invoke(self, payload: ToolPostInvokePayload, context: PluginContext) -> ToolPostInvokeResult:
         """Calculate token cost after tool execution and append to response content.
 
@@ -117,8 +148,11 @@ class TokenCostCalculatorPlugin(Plugin):
                 logger.warning("No result in payload, returning early")
                 return ToolPostInvokeResult(continue_processing=True)
 
-            # Count tokens from tool result content (not from our own cost display)
-            total_tokens = 0
+            # Get input tokens from context (set by tool_pre_invoke)
+            input_tokens = context.metadata.get("input_tokens", 0)
+            
+            # Count tokens from tool result content (output tokens)
+            output_tokens = 0
             
             # Extract text from the tool result
             result_content = payload.result
@@ -131,30 +165,31 @@ class TokenCostCalculatorPlugin(Plugin):
                     if isinstance(content, list):
                         for item in content:
                             text = _extract_text_from_content(item)
-                            total_tokens += _count_tokens(text)
+                            output_tokens += _count_tokens(text)
                     else:
                         text = _extract_text_from_content(content)
-                        total_tokens += _count_tokens(text)
+                        output_tokens += _count_tokens(text)
                 else:
                     # Count all dict content
                     text = json.dumps(result_content)
-                    total_tokens += _count_tokens(text)
+                    output_tokens += _count_tokens(text)
             elif isinstance(result_content, list):
                 # Handle list results
                 for item in result_content:
                     text = _extract_text_from_content(item)
-                    total_tokens += _count_tokens(text)
+                    output_tokens += _count_tokens(text)
             else:
                 # Handle string or other results
                 text = str(result_content)
-                total_tokens += _count_tokens(text)
+                output_tokens += _count_tokens(text)
 
-            # Calculate cost
+            # Calculate total tokens (input + output) and cost
+            total_tokens = input_tokens + output_tokens
             total_cost = total_tokens * self._cfg.cost_per_token
-            logger.info(f"Calculated: {total_tokens} tokens, ${total_cost:.6f} cost")
+            logger.info(f"Calculated: Input={input_tokens}, Output={output_tokens}, Total={total_tokens} tokens, ${total_cost:.6f} cost")
 
-            # Create cost display text
-            cost_text = f"\n\n---\n💰 **Token Cost**: {total_tokens} tokens × ${self._cfg.cost_per_token:.6f} = ${total_cost:.6f}"
+            # Create cost display text with breakdown
+            cost_text = f"\n\n---\n💰 **Token Cost**: Input={input_tokens} + Output={output_tokens} = {total_tokens} tokens × ${self._cfg.cost_per_token:.6f} = ${total_cost:.6f}"
 
             # Append cost information to the response content
             # Deep copy the result to avoid modifying the original
@@ -193,9 +228,11 @@ class TokenCostCalculatorPlugin(Plugin):
             elif isinstance(modified_result, str):
                 modified_result = modified_result + cost_text
 
-            # Add cost information to metadata
+            # Add cost information to metadata with breakdown
             cost_info = {
-                "token_count": total_tokens,
+                "input_tokens": input_tokens,
+                "output_tokens": output_tokens,
+                "total_tokens": total_tokens,
                 "cost_per_token": self._cfg.cost_per_token,
                 "total_cost_usd": round(total_cost, 6),
                 "cost_display": f"${total_cost:.6f}",
