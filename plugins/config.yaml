@@ -16,21 +16,6 @@ plugin_settings:
   include_user_info: false
 
 plugins:
-  # Token Cost Calculator - Display token costs for tool and prompt operations
-  - name: "TokenCostCalculatorPlugin"
-    kind: "plugins.token_cost_calculator.token_cost_calculator.TokenCostCalculatorPlugin"
-    description: "Calculates and displays token costs for tool and prompt operations"
-    version: "1.0.0"
-    author: "ContextForge Team"
-    hooks: ["prompt_pre_fetch", "prompt_post_fetch", "tool_pre_invoke", "tool_post_invoke"]
-    tags: ["cost", "tokens", "billing", "observability"]
-    mode: "disabled"
-    priority: 100
-    conditions: []
-    config:
-      cost_per_token: 0.000001
-      display_in_metadata: true
-
   # Argument Normalizer - stabilize inputs before anything else
   - name: "ArgumentNormalizer"
     kind: "plugins.argument_normalizer.argument_normalizer.ArgumentNormalizerPlugin"
